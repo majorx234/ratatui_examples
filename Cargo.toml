@@ -1,0 +1,20 @@
+[package]
+name = "ratatui_examples"
+version = "0.1.0"
+authors = ["MajorX234 <majorx234@googlemail.com>"]
+edition = "2021"
+
+#[lib]
+#name = "ratatui_examples"
+#path = "src/lib.rs"
+
+[[bin]]
+name = "barchart"
+path = "src/barchart.rs"
+
+[dependencies]
+ratatui = { version = "0.29.0", features = ["all-widgets"]}
+color-eyre = "0.6.3"
+crossterm = "0.28.1"
+better-panic = "0.3.0"
+rand = "0.8.5"
