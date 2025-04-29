@@ -4,7 +4,6 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use rand::{thread_rng, Rng};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     prelude::{Backend, CrosstermBackend, Terminal},
@@ -21,8 +20,9 @@ use std::{
 fn main() -> Result<()> {
     color_eyre::install()?;
     //    let terminal = ratatui::init();
-    let terminal = init_tui()?;
-    let app_result = App::new().run(terminal);
+    let mut terminal = init_tui()?;
+    let mut app: App = App::new();
+    let app_result = app.run(&mut terminal);
     restore_tui()?;
     app_result
 }
@@ -74,7 +74,7 @@ impl App {
         }
     }
 
-    fn run(mut self, mut terminal: Terminal<impl Backend>) -> Result<()> {
+    fn run(&mut self, terminal: &mut Terminal<impl Backend>) -> Result<()> {
         while !self.should_exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
