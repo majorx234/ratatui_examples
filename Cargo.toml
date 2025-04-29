@@ -16,6 +16,10 @@ path = "src/barchart.rs"
 name = "fuzzy_finder"
 path = "src/fuzzy_finder.rs"
 
+[[bin]]
+name = "progress_bar"
+path = "src/progress_bar.rs"
+
 [dependencies]
 ratatui = { version = "0.29.0", features = ["all-widgets"]}
 color-eyre = "0.6.3"
