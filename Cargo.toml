@@ -12,6 +12,10 @@ edition = "2021"
 name = "barchart"
 path = "src/barchart.rs"
 
+[[bin]]
+name = "fuzzy_finder"
+path = "src/fuzzy_finder.rs"
+
 [dependencies]
 ratatui = { version = "0.29.0", features = ["all-widgets"]}
 color-eyre = "0.6.3"
