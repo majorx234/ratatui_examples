@@ -8,6 +8,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     prelude::{Backend, Buffer, CrosstermBackend, Rect, Terminal},
     style::{Color, Style, Stylize},
+    symbols::border,
     text::Line,
     widgets::{Bar, BarChart, BarGroup, Block, Gauge, Widget},
     DefaultTerminal, Frame,
@@ -41,11 +42,19 @@ pub fn restore_tui() -> io::Result<()> {
 
 pub struct App {
     should_exit: bool,
+    progress_bar_color: Color,
+    progress_name: String,
+    progress_ratio: f64,
 }
 
 impl App {
     fn new() -> Self {
-        Self { should_exit: false }
+        Self {
+            should_exit: false,
+            progress_bar_color: Color::Blue,
+            progress_name: "Process 1".to_string(),
+            progress_ratio: 0.5,
+        }
     }
 
     fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
@@ -78,6 +87,44 @@ impl Widget for &App {
     where
         Self: Sized,
     {
-        Line::from("Progress overview").bold().render(area, buffer);
+        let vertical_layout =
+            Layout::vertical([Constraint::Percentage(20), Constraint::Percentage(80)]);
+        let [title_area, gauge_area] = vertical_layout.areas(area);
+
+        Line::from("Progress overview")
+            .bold()
+            .render(title_area, buffer);
+
+        let instruction = Line::from(vec![
+            " Quit ".into(),
+            "<Q> ".blue().bold(),
+            " Change color ".into(),
+            "<C> ".blue().bold(),
+        ])
+        .centered();
+
+        let block = Block::bordered()
+            .title(Line::from("Progress overview").bold())
+            .title_bottom(instruction)
+            .border_set(border::THICK);
+
+        let progress_bar = Gauge::default()
+            .gauge_style(Style::default().fg(self.progress_bar_color))
+            .block(block)
+            .label(format!(
+                "{}: {}%",
+                self.progress_name,
+                self.progress_ratio * 100.0
+            ))
+            .ratio(self.progress_ratio);
+        progress_bar.render(
+            Rect {
+                x: gauge_area.left(),
+                y: gauge_area.top(),
+                width: gauge_area.width,
+                height: 3,
+            },
+            buffer,
+        );
     }
 }
