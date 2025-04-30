@@ -1,3 +1,4 @@
+use color_eyre::owo_colors::OwoColorize;
 use color_eyre::Result;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
@@ -42,7 +43,7 @@ pub fn restore_tui() -> io::Result<()> {
 
 pub struct App {
     should_exit: bool,
-    progress_bar_color: Color,
+    progress_bar_color_idx: u8,
     progress_name: String,
     progress_ratio: f64,
 }
@@ -51,7 +52,7 @@ impl App {
     fn new() -> Self {
         Self {
             should_exit: false,
-            progress_bar_color: Color::Blue,
+            progress_bar_color_idx: 0,
             progress_name: "Process 1".to_string(),
             progress_ratio: 0.5,
         }
@@ -72,6 +73,8 @@ impl App {
                     || key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL)
             {
                 self.should_exit = true;
+            } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('c') {
+                self.progress_bar_color_idx += 1;
             }
         }
         Ok(())
@@ -87,6 +90,15 @@ impl Widget for &App {
     where
         Self: Sized,
     {
+        let color_map = [
+            Color::Green,
+            Color::Blue,
+            Color::Red,
+            Color::Cyan,
+            Color::Magenta,
+        ];
+        let color_idx = (self.progress_bar_color_idx % 5) as usize;
+        let color = color_map[color_idx];
         let vertical_layout =
             Layout::vertical([Constraint::Percentage(20), Constraint::Percentage(80)]);
         let [title_area, gauge_area] = vertical_layout.areas(area);
@@ -109,7 +121,7 @@ impl Widget for &App {
             .border_set(border::THICK);
 
         let progress_bar = Gauge::default()
-            .gauge_style(Style::default().fg(self.progress_bar_color))
+            .gauge_style(Style::default().fg(color))
             .block(block)
             .label(format!(
                 "{}: {}%",
