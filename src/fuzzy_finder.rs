@@ -6,17 +6,18 @@ use crossterm::{
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    prelude::{Backend, CrosstermBackend, Terminal},
+    prelude::{Backend, Buffer, CrosstermBackend, Rect, Terminal},
     style::{Color, Style, Stylize},
     text::Line,
-    widgets::{Bar, BarChart, BarGroup, Block},
+    widgets::{Bar, BarChart, BarGroup, Block, Gauge, Widget},
     Frame,
 };
 use std::{
     env::args,
     io::{self, stdout, Stdout},
 };
-
+mod dummy_thread;
+use dummy_thread::Dummy;
 fn main() -> Result<()> {
     color_eyre::install()?;
     //    let terminal = ratatui::init();
@@ -99,7 +100,5 @@ impl App {
         ])
         .spacing(1)
         .areas(frame.area());
-
-        frame.render_widget("Fuzzy Find a Book".bold().into_centered_line(), title);
     }
 }
