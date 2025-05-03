@@ -1,5 +1,6 @@
 use color_eyre::owo_colors::OwoColorize;
 use color_eyre::Result;
+use crossbeam_channel::{Receiver, Sender};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -17,13 +18,17 @@ use ratatui::{
 use std::{
     env::args,
     io::{self, stdout, Stdout},
+    thread,
 };
+mod dummy_thread;
+use dummy_thread::Dummy;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
     //    let terminal = ratatui::init();
     let mut terminal = init_tui()?;
-    let mut app: App = App::new();
+    let (thread_join_handle, tx_close, rx_status) = Dummy::start();
+    let mut app: App = App::new(thread_join_handle, tx_close, rx_status);
     let app_result = app.run(&mut terminal);
     restore_tui()?;
     app_result
@@ -46,15 +51,21 @@ pub struct App {
     progress_bar_color_idx: u8,
     progress_name: String,
     progress_ratio: f64,
+    jh: thread::JoinHandle<()>,
+    tx_close: Sender<bool>,
+    rx_progress: Receiver<f64>,
 }
 
 impl App {
-    fn new() -> Self {
+    fn new(jh: thread::JoinHandle<()>, tx_close: Sender<bool>, rx_progress: Receiver<f64>) -> Self {
         Self {
             should_exit: false,
             progress_bar_color_idx: 0,
             progress_name: "Process 1".to_string(),
-            progress_ratio: 0.5,
+            progress_ratio: 0.0,
+            jh,
+            tx_close,
+            rx_progress,
         }
     }
 
