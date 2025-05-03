@@ -15,7 +15,10 @@ impl Dummy {
         };
         let thread_join_handle = std::thread::spawn(move || {
             let mut run = true;
+            let mut progress_state: f64 = 0.0;
             while run {
+                let _ = dummy_obj.tx_status.send(progress_state);
+                progress_state += 0.5;
                 thread::sleep(Duration::from_millis(100));
                 match dummy_obj.rx_close.recv() {
                     Ok(running) => run = running,
