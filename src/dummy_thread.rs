@@ -18,13 +18,14 @@ impl Dummy {
             let mut progress_state: f64 = 0.0;
             while run {
                 let _ = dummy_obj.tx_status.send(progress_state);
-                progress_state += 0.5;
+                progress_state = (progress_state + 0.5).min(100.0);
                 thread::sleep(Duration::from_millis(100));
-                match dummy_obj.rx_close.recv() {
-                    Ok(running) => run = running,
-                    Err(_) => run = false,
+                match dummy_obj.rx_close.try_recv() {
+                    Ok(close) => run = !close,
+                    Err(_) => {}
                 }
             }
+            println!("dummy end");
         });
         (thread_join_handle, tx_close, rx_status)
     }

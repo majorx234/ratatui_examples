@@ -1,6 +1,6 @@
 use color_eyre::owo_colors::OwoColorize;
 use color_eyre::Result;
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -18,7 +18,7 @@ use ratatui::{
 use std::{
     env::args,
     io::{self, stdout, Stdout},
-    thread,
+    thread::{self, sleep},
 };
 mod dummy_thread;
 use dummy_thread::Dummy;
@@ -46,26 +46,69 @@ pub fn restore_tui() -> io::Result<()> {
     Ok(())
 }
 
+enum KeyMsg {
+    CLOSE,
+    CHANGE_COLOR,
+}
+
 pub struct App {
     should_exit: bool,
     progress_bar_color_idx: u8,
     progress_name: String,
     progress_ratio: f64,
-    jh: thread::JoinHandle<()>,
+    progress_thread_jh: thread::JoinHandle<()>,
+    input_thread_jh: thread::JoinHandle<()>,
     tx_close: Sender<bool>,
+    tx_close_input: Sender<bool>,
     rx_progress: Receiver<f64>,
+    rx_keymsg: Receiver<KeyMsg>,
 }
 
 impl App {
-    fn new(jh: thread::JoinHandle<()>, tx_close: Sender<bool>, rx_progress: Receiver<f64>) -> Self {
+    fn new(
+        progress_thread_jh: thread::JoinHandle<()>,
+        tx_close: Sender<bool>,
+        rx_progress: Receiver<f64>,
+    ) -> Self {
+        let (tx_close_input, rx_close_input) = unbounded::<bool>();
+        let (tx_keymsg, rx_keymsg) = unbounded();
+        let input_thread_jh = std::thread::spawn(move || {
+            let mut run = true;
+
+            while run {
+                println!("input get key");
+                if let Event::Key(key) = event::read().expect("read sth from input") {
+                    if key.kind == KeyEventKind::Press
+                        && (key.code == KeyCode::Char('q')
+                            || key.code == KeyCode::Char('c')
+                                && key.modifiers == KeyModifiers::CONTROL)
+                    {
+                        let _ = tx_keymsg.send(KeyMsg::CLOSE);
+                    } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('c') {
+                        let _ = tx_keymsg.send(KeyMsg::CHANGE_COLOR);
+                    }
+                }
+                match rx_close_input.try_recv() {
+                    Ok(close) => {
+                        println!("receive close: {}", close);
+                        run = !close;
+                    }
+                    Err(_) => {}
+                }
+            }
+            println!("input end");
+        });
         Self {
             should_exit: false,
             progress_bar_color_idx: 0,
             progress_name: "Process 1".to_string(),
             progress_ratio: 0.0,
-            jh,
+            progress_thread_jh,
             tx_close,
+            tx_close_input,
             rx_progress,
+            input_thread_jh,
+            rx_keymsg,
         }
     }
 
@@ -73,20 +116,26 @@ impl App {
         while !self.should_exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
+            sleep(std::time::Duration::from_millis(10));
         }
+        let _ = self.tx_close.send(true);
+        let _ = self.tx_close_input.send(true);
         Ok(())
     }
 
     fn handle_events(&mut self) -> Result<()> {
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press
-                && (key.code == KeyCode::Char('q')
-                    || key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL)
-            {
-                self.should_exit = true;
-            } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('c') {
-                self.progress_bar_color_idx += 1;
+        if let Ok(key_msg) = self.rx_keymsg.try_recv() {
+            match key_msg {
+                KeyMsg::CHANGE_COLOR => {
+                    self.progress_bar_color_idx += 1;
+                }
+                KeyMsg::CLOSE => {
+                    self.should_exit = true;
+                }
             }
+        }
+        if let Ok(progress_msg) = self.rx_progress.try_recv() {
+            self.progress_ratio = progress_msg / 100.0;
         }
         Ok(())
     }
