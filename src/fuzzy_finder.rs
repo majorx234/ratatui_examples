@@ -9,7 +9,7 @@ use ratatui::{
     prelude::{Backend, Buffer, CrosstermBackend, Rect, Terminal},
     style::{Color, Style, Stylize},
     text::Line,
-    widgets::{Bar, BarChart, BarGroup, Block, Gauge, Widget},
+    widgets::{Block, Paragraph, Widget},
     Frame,
 };
 use std::{
@@ -40,6 +40,7 @@ pub fn restore_tui() -> io::Result<()> {
 
 struct App {
     should_exit: bool,
+    search_input: String,
     book_list: Vec<String>,
 }
 
@@ -70,6 +71,7 @@ impl App {
         Self {
             should_exit: false,
             book_list,
+            search_input: "".to_string(),
         }
     }
 
@@ -91,12 +93,16 @@ impl App {
     }
 
     fn draw(&self, frame: &mut Frame) {
-        let [title, vertical, horizontal] = Layout::vertical([
+        let [title, input_area, result_area] = Layout::vertical([
             Constraint::Length(1),
             Constraint::Fill(1),
             Constraint::Fill(1),
         ])
         .spacing(1)
         .areas(frame.area());
+        let search_input = Paragraph::new(self.search_input.as_str())
+            .style(Style::default())
+            .block(Block::bordered().title("Input"));
+        frame.render_widget(search_input, input_area);
     }
 }
