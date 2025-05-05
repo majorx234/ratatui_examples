@@ -1,5 +1,6 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::{thread, time::Duration};
+
 pub struct Dummy {
     rx_close: Receiver<bool>,
     tx_status: Sender<f64>,
@@ -20,9 +21,8 @@ impl Dummy {
                 let _ = dummy_obj.tx_status.send(progress_state);
                 progress_state = (progress_state + 0.5).min(100.0);
                 thread::sleep(Duration::from_millis(100));
-                match dummy_obj.rx_close.try_recv() {
-                    Ok(close) => run = !close,
-                    Err(_) => {}
+                if let Ok(close) = dummy_obj.rx_close.try_recv() {
+                    run = !close
                 }
             }
         });

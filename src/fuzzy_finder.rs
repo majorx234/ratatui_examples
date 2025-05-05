@@ -16,8 +16,6 @@ use std::{
     env::args,
     io::{self, stdout, Stdout},
 };
-mod dummy_thread;
-use dummy_thread::Dummy;
 fn main() -> Result<()> {
     color_eyre::install()?;
     //    let terminal = ratatui::init();

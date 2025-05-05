@@ -7,16 +7,15 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
-    prelude::{Backend, Buffer, CrosstermBackend, Rect, Terminal},
+    layout::{Constraint, Layout},
+    prelude::{Buffer, CrosstermBackend, Rect, Terminal},
     style::{Color, Style, Stylize},
     symbols::border,
     text::Line,
-    widgets::{Bar, BarChart, BarGroup, Block, Gauge, Widget},
+    widgets::{Block, Gauge, Widget},
     DefaultTerminal, Frame,
 };
 use std::{
-    env::args,
     io::{self, stdout, Stdout},
     thread::{self, sleep},
 };
@@ -47,8 +46,8 @@ pub fn restore_tui() -> io::Result<()> {
 }
 
 enum KeyMsg {
-    CLOSE,
-    CHANGE_COLOR,
+    Close,
+    ChangeColor,
 }
 
 pub struct App {
@@ -82,9 +81,9 @@ impl App {
                             || key.code == KeyCode::Char('c')
                                 && key.modifiers == KeyModifiers::CONTROL)
                     {
-                        let _ = tx_keymsg.send(KeyMsg::CLOSE);
+                        let _ = tx_keymsg.send(KeyMsg::Close);
                     } else if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('c') {
-                        let _ = tx_keymsg.send(KeyMsg::CHANGE_COLOR);
+                        let _ = tx_keymsg.send(KeyMsg::ChangeColor);
                     }
                 }
                 match rx_close_input.try_recv() {
@@ -129,10 +128,10 @@ impl App {
     fn handle_events(&mut self) -> Result<()> {
         if let Ok(key_msg) = self.rx_keymsg.try_recv() {
             match key_msg {
-                KeyMsg::CHANGE_COLOR => {
+                KeyMsg::ChangeColor => {
                     self.progress_bar_color_idx += 1;
                 }
-                KeyMsg::CLOSE => {
+                KeyMsg::Close => {
                     self.should_exit = true;
                 }
             }
