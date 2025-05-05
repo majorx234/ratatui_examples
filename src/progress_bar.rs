@@ -56,8 +56,8 @@ pub struct App {
     progress_bar_color_idx: u8,
     progress_name: String,
     progress_ratio: f64,
-    progress_thread_jh: thread::JoinHandle<()>,
-    input_thread_jh: thread::JoinHandle<()>,
+    progress_thread_jh: Option<thread::JoinHandle<()>>,
+    input_thread_jh: Option<thread::JoinHandle<()>>,
     tx_close: Sender<bool>,
     tx_close_input: Sender<bool>,
     rx_progress: Receiver<f64>,
@@ -103,11 +103,11 @@ impl App {
             progress_bar_color_idx: 0,
             progress_name: "Process 1".to_string(),
             progress_ratio: 0.0,
-            progress_thread_jh,
+            progress_thread_jh: Some(progress_thread_jh),
             tx_close,
             tx_close_input,
             rx_progress,
-            input_thread_jh,
+            input_thread_jh: Some(input_thread_jh),
             rx_keymsg,
         }
     }
@@ -120,6 +120,12 @@ impl App {
         }
         let _ = self.tx_close.send(true);
         let _ = self.tx_close_input.send(true);
+        if let Some(progress_thread_jh) = self.progress_thread_jh.take() {
+            let _ = progress_thread_jh.join();
+        }
+        if let Some(input_thread_jh) = self.input_thread_jh.take() {
+            let _ = input_thread_jh.join();
+        }
         Ok(())
     }
 
