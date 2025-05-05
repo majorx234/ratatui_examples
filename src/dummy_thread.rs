@@ -25,7 +25,6 @@ impl Dummy {
                     Err(_) => {}
                 }
             }
-            println!("dummy end");
         });
         (thread_join_handle, tx_close, rx_status)
     }

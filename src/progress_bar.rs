@@ -76,7 +76,6 @@ impl App {
             let mut run = true;
 
             while run {
-                println!("input get key");
                 if let Event::Key(key) = event::read().expect("read sth from input") {
                     if key.kind == KeyEventKind::Press
                         && (key.code == KeyCode::Char('q')
@@ -90,13 +89,11 @@ impl App {
                 }
                 match rx_close_input.try_recv() {
                     Ok(close) => {
-                        println!("receive close: {}", close);
                         run = !close;
                     }
                     Err(_) => {}
                 }
             }
-            println!("input end");
         });
         Self {
             should_exit: false,
