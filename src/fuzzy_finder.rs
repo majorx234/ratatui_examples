@@ -5,7 +5,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Position},
     prelude::{Backend, Buffer, CrosstermBackend, Rect, Terminal},
     style::{Color, Style, Stylize},
     text::Line,
@@ -161,8 +161,8 @@ impl App {
     fn draw(&self, frame: &mut Frame) {
         let [title, input_area, result_area] = Layout::vertical([
             Constraint::Length(1),
-            Constraint::Fill(1),
-            Constraint::Fill(1),
+            Constraint::Length(3),
+            Constraint::Min(1),
         ])
         .spacing(1)
         .areas(frame.area());
@@ -170,5 +170,9 @@ impl App {
             .style(Style::default())
             .block(Block::bordered().title("Input"));
         frame.render_widget(search_input, input_area);
+        frame.set_cursor_position(Position::new(
+            input_area.x + self.search_input_character_index as u16 + 1,
+            input_area.y + 1,
+        ));
     }
 }
