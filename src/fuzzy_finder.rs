@@ -8,8 +8,8 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Position},
     prelude::{Backend, Buffer, CrosstermBackend, Rect, Terminal},
     style::{Color, Style, Stylize},
-    text::Line,
-    widgets::{Block, Paragraph, Widget},
+    text::{Line, Span, Text},
+    widgets::{Block, List, ListItem, Paragraph, Widget},
     Frame,
 };
 use std::{
@@ -174,5 +174,17 @@ impl App {
             input_area.x + self.search_input_character_index as u16 + 1,
             input_area.y + 1,
         ));
+        let book_list_filtered: Vec<ListItem> = self
+            .book_list
+            .iter()
+            .enumerate()
+            .map(|(i, m)| {
+                let content = Line::from(Span::raw(format!("{i}: {m}")));
+                ListItem::new(content)
+            })
+            .collect();
+        let book_list_filtered =
+            List::new(book_list_filtered).block(Block::bordered().title("search results"));
+        frame.render_widget(book_list_filtered, result_area);
     }
 }
