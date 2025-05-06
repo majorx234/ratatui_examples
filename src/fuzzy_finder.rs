@@ -4,6 +4,9 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
+use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
+
 use ratatui::{
     layout::{Constraint, Direction, Layout, Position},
     prelude::{Backend, Buffer, CrosstermBackend, Rect, Terminal},
@@ -16,6 +19,7 @@ use std::{
     env::args,
     io::{self, stdout, Stdout},
 };
+
 fn main() -> Result<()> {
     color_eyre::install()?;
     //    let terminal = ratatui::init();
@@ -43,6 +47,7 @@ struct App {
     search_input: String,
     search_input_character_index: usize,
     book_list: Vec<String>,
+    result_list: Vec<(i64, String)>,
 }
 
 impl App {
@@ -74,6 +79,7 @@ impl App {
             book_list,
             search_input: "".to_string(),
             search_input_character_index: 0,
+            result_list: Vec::new(),
         }
     }
 
@@ -125,8 +131,20 @@ impl App {
 
     fn submit_search(&mut self) {
         //self.search(self.input.clone());
+        let search_string = self.search_input.clone();
         self.search_input.clear();
         self.reset_cursor();
+
+        // doing matcher stuff
+        let matcher = SkimMatcherV2::default();
+        let mut result_list: Vec<(i64, String)> = Vec::new();
+        for item in self.book_list.iter() {
+            if let Some(result) = matcher.fuzzy_match(item, &search_string) {
+                result_list.push((result, item.clone()));
+            }
+        }
+        result_list.sort_by(|(s1score, _), (s2score, _)| s2score.cmp(s1score));
+        self.result_list = result_list;
     }
 
     fn run(&mut self, terminal: &mut Terminal<impl Backend>) -> Result<()> {
@@ -175,11 +193,11 @@ impl App {
             input_area.y + 1,
         ));
         let book_list_filtered: Vec<ListItem> = self
-            .book_list
+            .result_list
             .iter()
             .enumerate()
             .map(|(i, m)| {
-                let content = Line::from(Span::raw(format!("{i}: {m}")));
+                let content = Line::from(Span::raw(format!("{i}: {} {}", m.0, m.1)));
                 ListItem::new(content)
             })
             .collect();
