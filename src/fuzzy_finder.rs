@@ -19,6 +19,8 @@ use std::{
     env::args,
     io::{self, stdout, Stdout},
 };
+mod helper;
+use helper::highlight_char_in_text;
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -47,7 +49,7 @@ struct App {
     search_input: String,
     search_input_character_index: usize,
     book_list: Vec<String>,
-    result_list: Vec<(i64, String)>,
+    result_list: Vec<(i64, Vec<usize>, String)>,
 }
 
 impl App {
@@ -137,13 +139,13 @@ impl App {
 
         // doing matcher stuff
         let matcher = SkimMatcherV2::default();
-        let mut result_list: Vec<(i64, String)> = Vec::new();
+        let mut result_list: Vec<(i64, Vec<usize>, String)> = Vec::new();
         for item in self.book_list.iter() {
-            if let Some(result) = matcher.fuzzy_match(item, &search_string) {
-                result_list.push((result, item.clone()));
+            if let Some((score, indices)) = matcher.fuzzy_indices(item, &search_string) {
+                result_list.push((score, indices, item.clone()));
             }
         }
-        result_list.sort_by(|(s1score, _), (s2score, _)| s2score.cmp(s1score));
+        result_list.sort_by(|(s1score, _, _), (s2score, _, _)| s2score.cmp(s1score));
         self.result_list = result_list;
     }
 
@@ -197,7 +199,8 @@ impl App {
             .iter()
             .enumerate()
             .map(|(i, m)| {
-                let content = Line::from(Span::raw(format!("{i}: {} {}", m.0, m.1)));
+                // let content = Line::from(Span::raw(format!("{i}: {} {}", m.0, m.2,)));
+                let content = highlight_char_in_text(&m.2, &m.1);
                 ListItem::new(content)
             })
             .collect();
