@@ -1,6 +1,6 @@
 use color_eyre::Result;
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
+    event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -41,6 +41,7 @@ pub fn restore_tui() -> io::Result<()> {
 struct App {
     should_exit: bool,
     search_input: String,
+    search_input_character_index: usize,
     book_list: Vec<String>,
 }
 
@@ -72,7 +73,60 @@ impl App {
             should_exit: false,
             book_list,
             search_input: "".to_string(),
+            search_input_character_index: 0,
         }
+    }
+
+    fn move_cursor_left(&mut self) {
+        let cursor_moved_left = self.search_input_character_index.saturating_sub(1);
+        self.search_input_character_index = self.clamp_cursor(cursor_moved_left);
+    }
+
+    fn move_cursor_right(&mut self) {
+        let cursor_moved_right = self.search_input_character_index.saturating_add(1);
+        self.search_input_character_index = self.clamp_cursor(cursor_moved_right);
+    }
+
+    fn enter_char(&mut self, new_char: char) {
+        let index = self.byte_index();
+        self.search_input.insert(index, new_char);
+        self.move_cursor_right();
+    }
+
+    fn byte_index(&self) -> usize {
+        self.search_input
+            .char_indices()
+            .map(|(i, _)| i)
+            .nth(self.search_input_character_index)
+            .unwrap_or(self.search_input.len())
+    }
+
+    fn delete_char(&mut self) {
+        let is_not_cursor_leftmost = self.search_input_character_index != 0;
+        if is_not_cursor_leftmost {
+            let current_index = self.search_input_character_index;
+            let from_left_to_current_index = current_index - 1;
+
+            let before_char_to_delete = self.search_input.chars().take(from_left_to_current_index);
+            let after_char_to_delete = self.search_input.chars().skip(current_index);
+
+            self.search_input = before_char_to_delete.chain(after_char_to_delete).collect();
+            self.move_cursor_left();
+        }
+    }
+
+    fn clamp_cursor(&self, new_cursor_pos: usize) -> usize {
+        new_cursor_pos.clamp(0, self.search_input.chars().count())
+    }
+
+    fn reset_cursor(&mut self) {
+        self.search_input_character_index = 0;
+    }
+
+    fn submit_search(&mut self) {
+        //self.search(self.input.clone());
+        self.search_input.clear();
+        self.reset_cursor();
     }
 
     fn run(&mut self, terminal: &mut Terminal<impl Backend>) -> Result<()> {
@@ -85,8 +139,20 @@ impl App {
 
     fn handle_events(&mut self) -> Result<()> {
         if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+            if key.kind == KeyEventKind::Press
+                && key.code == KeyCode::Char('c')
+                && key.modifiers == KeyModifiers::CONTROL
+            {
                 self.should_exit = true;
+            } else {
+                match key.code {
+                    KeyCode::Enter => self.submit_search(),
+                    KeyCode::Char(to_insert) => self.enter_char(to_insert),
+                    KeyCode::Backspace => self.delete_char(),
+                    KeyCode::Left => self.move_cursor_left(),
+                    KeyCode::Right => self.move_cursor_right(),
+                    _ => {}
+                }
             }
         }
         Ok(())
