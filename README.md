@@ -10,5 +10,5 @@
 - get progress information from another thread
   through a channel to show a progressbar
 ## 3. fuzzy finder
-- WIP
-- some kind of search interface
+-  search interface with fuzzy matching of search string
+
